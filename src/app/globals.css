@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default System — light mode tokens (RGB channel format for alpha support) */
+  --bg: 255 255 255;
+  --layer-1: 247 247 247;
+  --layer-2: 239 239 239;
+  --stroke: 240 240 240;
+  --accent-1: 86 76 216;
+  --accent-1-bg: 236 235 255;
+  --text-primary: 37 37 37;
+  --text-secondary: 81 81 81;
+  --grey: 130 130 130;
+  color-scheme: light;
+}
+
+html.dark {
+  /* Default System — dark mode tokens */
+  --bg: 24 24 24;
+  --layer-1: 51 51 51;
+  --layer-2: 70 70 70;
+  --stroke: 68 68 68;
+  --accent-1: 0 191 191;
+  --accent-1-bg: 26 49 49;
+  --text-primary: 253 253 253;
+  --text-secondary: 179 179 179;
+  --grey: 130 130 130;
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  transition: background-color 0.3s ease;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text-primary));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-6;
+  }
+
+  .section-pad {
+    @apply py-24 md:py-32;
+  }
+
+  .eyebrow {
+    @apply text-sm font-medium uppercase tracking-widest text-accent-1;
+  }
+
+  .h1 {
+    @apply text-4xl font-semibold leading-[1.1] tracking-tight text-text-primary md:text-6xl;
+  }
+
+  .h2 {
+    @apply text-3xl font-semibold leading-tight tracking-tight text-text-primary md:text-5xl;
+  }
+
+  .h3 {
+    @apply text-xl font-semibold text-text-primary;
+  }
+
+  .body-lg {
+    @apply text-lg leading-relaxed text-text-secondary;
+  }
+
+  .body {
+    @apply text-base leading-relaxed text-text-secondary;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-stroke bg-layer-1 px-3 py-1 text-sm text-text-secondary;
+  }
+
+  .card {
+    @apply rounded-2xl border border-stroke bg-bg;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-stroke bg-bg px-4 py-3 text-base text-text-primary placeholder:text-grey focus:border-accent-1 focus:outline-none focus:ring-2 focus:ring-accent-1/30;
+  }
+}
+
+/* Focus visibility */
+:focus-visible {
+  outline: 2px solid rgb(var(--accent-1));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Selection */
+::selection {
+  background: rgb(var(--accent-1-bg));
+  color: rgb(var(--accent-1));
+}
+
+/* Subtle grid background for hero / workflow sections */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, var(--stroke) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--stroke) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Workflow connector line (desktop only) */
+.workflow-line::before {
+  content: "";
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .workflow-line::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 3.5rem;
+    bottom: 0;
+    width: 1px;
+    background-color: rgb(var(--stroke));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

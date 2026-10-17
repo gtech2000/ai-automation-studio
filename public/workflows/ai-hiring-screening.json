@@ -1,0 +1,283 @@
+{
+  "name": "AI Hiring & CV Screening",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-application",
+        "options": {}
+      },
+      "name": "Webhook — Application Received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "fileId": {
+          "__rl": true,
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "name": "Google Drive — Get CV",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "name": "Extract CV Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "message": [
+            {
+              "role": "system",
+              "content": "You are a hiring assistant. Score the CV 0-100 for the open role. Assess role fit, relevant experience, and overall qualification. Return JSON: {\"score\": number, \"reasoning\": string, \"strengths\": string[]}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.text }}"
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "name": "OpenAI — Score CV",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ]
+        }
+      },
+      "name": "Above the Bar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Shortlist"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Role Applied": "={{ $json.role }}",
+            "Score": "={{ $json.score }}",
+            "AI Reasoning": "={{ $json.reasoning }}",
+            "Screened At": "={{ $now }}"
+          }
+        }
+      },
+      "name": "Google Sheets — Shortlist",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "channel": "hr-team",
+        "text": "New shortlisted candidate: {{ $json.name }} — score {{ $json.score }}/100 for {{ $json.role }}. Reasoning: {{ $json.reasoning }}"
+      },
+      "name": "Slack — Notify HR",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      },
+      "name": "Wait — Response Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1780, 180]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "to": "={{ $json.email }}",
+        "subject": "Thanks — you're moving forward",
+        "message": "Hi {{ $json.name }}, thanks for applying. We'd love to move forward with your application — our team will reach out shortly."
+      },
+      "name": "Gmail — Moving Forward",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [2000, 180]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "days"
+      },
+      "name": "Wait — Rejection Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1340, 480]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "to": "={{ $json.email }}",
+        "subject": "Update on your application",
+        "message": "Hi {{ $json.name }}, thank you for taking the time to apply. After careful review, we've decided not to move forward on this occasion — but we genuinely appreciate your interest."
+      },
+      "name": "Gmail — Not This Time",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1560, 480]
+    }
+  ],
+  "connections": {
+    "Webhook — Application Received": {
+      "main": [
+        [
+          {
+            "node": "Google Drive — Get CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive — Get CV": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text": {
+      "main": [
+        [
+          {
+            "node": "OpenAI — Score CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI — Score CV": {
+      "main": [
+        [
+          {
+            "node": "Above the Bar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Above the Bar?": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait — Rejection Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Shortlist": {
+      "main": [
+        [
+          {
+            "node": "Slack — Notify HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack — Notify HR": {
+      "main": [
+        [
+          {
+            "node": "Wait — Response Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait — Response Delay": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Moving Forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait — Rejection Delay": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Not This Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

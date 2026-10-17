@@ -1,0 +1,167 @@
+{
+  "name": "Monthly Meeting Reminder",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDay": [15],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "name": "Schedule — Monthly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "list"
+        },
+        "options": {
+          "timeMin": "={{ $now }}",
+          "timeMax": "={{ $now.plus({ months: 1 }) }}",
+          "search": "Monthly Meeting"
+        }
+      },
+      "name": "Google Calendar — Find Meeting Date",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "list"
+        },
+        "options": {
+          "summary": "Monthly Meeting",
+          "conferenceDataVersion": 1,
+          "conferenceSolution": "hangoutsMeet"
+        }
+      },
+      "name": "Google Calendar — Create Meeting + Link",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "query",
+        "databaseId": {
+          "__rl": true,
+          "mode": "list"
+        },
+        "options": {
+          "filter": {
+            "conditions": [
+              {
+                "property": "Attendee",
+                "checkbox": {
+                  "equals": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "Notion — Get Attendee Emails",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const meeting = items[0].json;\nconst attendees = items.slice(1).map((item) => item.json);\nreturn attendees.map((a) => ({\n  json: {\n    email: a.email,\n    name: a.name,\n    meetingTitle: meeting.summary,\n    meetingDate: meeting.start.dateTime,\n    meetLink: meeting.hangoutLink,\n  },\n}));"
+      },
+      "name": "Build Invite List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "to": "={{ $json.email }}",
+        "subject": "Monthly Meeting — {{ $json.meetingDate }}",
+        "message": "Hi {{ $json.name }},\n\nThe monthly meeting is scheduled for {{ $json.meetingDate }}.\n\nJoin here: {{ $json.meetLink }}\n\nSee you there!"
+      },
+      "name": "Gmail — Send Invite",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Schedule — Monthly": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar — Find Meeting Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar — Find Meeting Date": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar — Create Meeting + Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar — Create Meeting + Link": {
+      "main": [
+        [
+          {
+            "node": "Notion — Get Attendee Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion — Get Attendee Emails": {
+      "main": [
+        [
+          {
+            "node": "Build Invite List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Invite List": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Send Invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
